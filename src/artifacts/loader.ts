@@ -99,27 +99,32 @@ export class ArtifactLoader {
 	}
 
 	#normalizeArtifact(raw: any, source: string): ExternalArtifact {
-		// Validate required fields
-		if (!raw.contractName || typeof raw.contractName !== 'string') {
-			throw new Error(
-				`Artifact from ${source} is missing required field 'contractName'`,
-			);
-		}
-		if (!raw.sourceName || typeof raw.sourceName !== 'string') {
-			throw new Error(
-				`Artifact from ${source} is missing required field 'sourceName'`,
-			);
-		}
+		// Validate required fields - only ABI is truly required
 		if (!raw.abi || !Array.isArray(raw.abi)) {
 			throw new Error(
 				`Artifact from ${source} is missing required field 'abi' or it's not an array`,
 			);
 		}
 
+		// Infer contractName from filename if not provided
+		// e.g., "/path/to/EIP173Proxy.json" -> "EIP173Proxy"
+		let contractName = raw.contractName;
+		if (!contractName || typeof contractName !== 'string') {
+			const filename = path.basename(source, '.json');
+			contractName = filename;
+		}
+
+		// Infer sourceName from filename if not provided
+		// e.g., "EIP173Proxy" -> "external/EIP173Proxy.sol"
+		let sourceName = raw.sourceName;
+		if (!sourceName || typeof sourceName !== 'string') {
+			sourceName = `external/${contractName}.sol`;
+		}
+
 		// Base artifact fields - required
 		const artifact: ExternalArtifact = {
-			contractName: raw.contractName,
-			sourceName: raw.sourceName,
+			contractName,
+			sourceName,
 			abi: raw.abi,
 			bytecode: raw.bytecode ?? '0x',
 			deployedBytecode: raw.deployedBytecode ?? '0x',
