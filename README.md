@@ -20,22 +20,22 @@ Import the plugin in your Hardhat configuration file:
 
 ```typescript
 // hardhat.config.ts
-import type { HardhatUserConfig } from "hardhat/config";
-import "hardhat-external-artifacts";
+import type {HardhatUserConfig} from 'hardhat/config';
+import 'hardhat-external-artifacts';
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.20",
-  externalArtifacts: {
-    // Load specific artifact files
-    paths: [
-      "./external-artifacts/WETH.json",
-      "./external-artifacts/Uniswap/", // Loads all .json in directory
-    ],
-    // Optional: specify solc version for synthetic compilations
-    solcVersion: "0.8.20",
-    // Optional: disable warnings for invalid artifacts
-    warnOnInvalidArtifacts: true,
-  },
+	solidity: '0.8.20',
+	externalArtifacts: {
+		// Load specific artifact files
+		paths: [
+			'./external-artifacts/WETH.json',
+			'./external-artifacts/Uniswap/', // Loads all .json in directory
+		],
+		// Optional: specify solc version for synthetic compilations
+		solcVersion: '0.8.20',
+		// Optional: disable warnings for invalid artifacts
+		warnOnInvalidArtifacts: true,
+	},
 };
 
 export default config;
@@ -47,28 +47,28 @@ For more dynamic artifact loading, you can use a resolver function:
 
 ```typescript
 // hardhat.config.ts
-import type { HardhatUserConfig } from "hardhat/config";
-import "hardhat-external-artifacts";
+import type {HardhatUserConfig} from 'hardhat/config';
+import 'hardhat-external-artifacts';
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.20",
-  externalArtifacts: {
-    resolver: async () => {
-      // Fetch from API, database, or any source
-      return [
-        {
-          contractName: "ERC20",
-          sourceName: "openzeppelin/ERC20.sol",
-          abi: [
-            /* ... */
-          ],
-          bytecode: "0x...",
-          deployedBytecode: "0x...",
-        },
-      ];
-    },
-    solcVersion: "0.8.20",
-  },
+	solidity: '0.8.20',
+	externalArtifacts: {
+		resolver: async () => {
+			// Fetch from API, database, or any source
+			return [
+				{
+					contractName: 'ERC20',
+					sourceName: 'openzeppelin/ERC20.sol',
+					abi: [
+						/* ... */
+					],
+					bytecode: '0x...',
+					deployedBytecode: '0x...',
+				},
+			];
+		},
+		solcVersion: '0.8.20',
+	},
 };
 
 export default config;
@@ -80,25 +80,25 @@ You can use both paths and resolver together:
 
 ```typescript
 // hardhat.config.ts
-import type { HardhatUserConfig } from "hardhat/config";
-import "hardhat-external-artifacts";
-import { loadDefiProtocolArtifacts } from "./scripts/load-defi";
+import type {HardhatUserConfig} from 'hardhat/config';
+import 'hardhat-external-artifacts';
+import {loadDefiProtocolArtifacts} from './scripts/load-defi';
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.20",
-  externalArtifacts: {
-    // Load from local directory
-    paths: ["./vendor-artifacts/"],
+	solidity: '0.8.20',
+	externalArtifacts: {
+		// Load from local directory
+		paths: ['./vendor-artifacts/'],
 
-    // Also fetch dynamically
-    resolver: async () => loadDefiProtocolArtifacts(),
+		// Also fetch dynamically
+		resolver: async () => loadDefiProtocolArtifacts(),
 
-    // Use specific solc version for method ID computation
-    solcVersion: "0.8.19",
+		// Use specific solc version for method ID computation
+		solcVersion: '0.8.19',
 
-    // Silence warnings for experimental use
-    warnOnInvalidArtifacts: false,
-  },
+		// Silence warnings for experimental use
+		warnOnInvalidArtifacts: false,
+	},
 };
 
 export default config;
@@ -106,12 +106,12 @@ export default config;
 
 ## Configuration Options
 
-| Option                   | Type                                    | Default    | Description                                           |
-| ------------------------ | --------------------------------------- | ---------- | ----------------------------------------------------- |
-| `paths`                  | `string[]`                              | `[]`       | Paths to artifact files or directories                |
-| `resolver`               | `() => Promise<ExternalArtifact[]>`     | `undefined`| Function that returns artifacts dynamically           |
-| `solcVersion`            | `string`                                | `"0.8.20"` | Solc version for synthetic compilations               |
-| `warnOnInvalidArtifacts` | `boolean`                               | `true`     | Whether to log warnings for malformed artifacts       |
+| Option                   | Type                                | Default     | Description                                     |
+| ------------------------ | ----------------------------------- | ----------- | ----------------------------------------------- |
+| `paths`                  | `string[]`                          | `[]`        | Paths to artifact files or directories          |
+| `resolver`               | `() => Promise<ExternalArtifact[]>` | `undefined` | Function that returns artifacts dynamically     |
+| `solcVersion`            | `string`                            | `"0.8.20"`  | Solc version for synthetic compilations         |
+| `warnOnInvalidArtifacts` | `boolean`                           | `true`      | Whether to log warnings for malformed artifacts |
 
 ## Artifact Format
 
