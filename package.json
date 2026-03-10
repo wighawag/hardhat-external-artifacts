@@ -1,6 +1,6 @@
 {
 	"name": "hardhat-external-artifacts",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Hardhat plugin that allow hardhat to know about them",
 	"keywords": [
 		"hardhat",
