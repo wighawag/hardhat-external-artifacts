@@ -16,14 +16,15 @@ yarn add hardhat-external-artifacts
 
 ## Usage
 
-Import the plugin in your Hardhat configuration file:
+Import the plugin and add it to the `plugins` array in your Hardhat configuration file:
 
 ```typescript
 // hardhat.config.ts
 import type {HardhatUserConfig} from 'hardhat/config';
-import 'hardhat-external-artifacts';
+import HardhatExternalArtifactsPlugin from 'hardhat-external-artifacts';
 
 const config: HardhatUserConfig = {
+	plugins: [HardhatExternalArtifactsPlugin],
 	solidity: '0.8.20',
 	externalArtifacts: {
 		// Load specific artifact files
@@ -48,9 +49,10 @@ You can load artifacts directly from npm packages using the `modules` option. Th
 ```typescript
 // hardhat.config.ts
 import type {HardhatUserConfig} from 'hardhat/config';
-import 'hardhat-external-artifacts';
+import HardhatExternalArtifactsPlugin from 'hardhat-external-artifacts';
 
 const config: HardhatUserConfig = {
+	plugins: [HardhatExternalArtifactsPlugin],
 	solidity: '0.8.20',
 	externalArtifacts: {
 		// Load from npm packages via module resolution
@@ -85,9 +87,10 @@ For more dynamic artifact loading, you can use a resolver function:
 ```typescript
 // hardhat.config.ts
 import type {HardhatUserConfig} from 'hardhat/config';
-import 'hardhat-external-artifacts';
+import HardhatExternalArtifactsPlugin from 'hardhat-external-artifacts';
 
 const config: HardhatUserConfig = {
+	plugins: [HardhatExternalArtifactsPlugin],
 	solidity: '0.8.20',
 	externalArtifacts: {
 		resolver: async () => {
@@ -118,10 +121,11 @@ You can use both paths and resolver together:
 ```typescript
 // hardhat.config.ts
 import type {HardhatUserConfig} from 'hardhat/config';
-import 'hardhat-external-artifacts';
+import HardhatExternalArtifactsPlugin from 'hardhat-external-artifacts';
 import {loadDefiProtocolArtifacts} from './scripts/load-defi';
 
 const config: HardhatUserConfig = {
+	plugins: [HardhatExternalArtifactsPlugin],
 	solidity: '0.8.20',
 	externalArtifacts: {
 		// Load from local directory
