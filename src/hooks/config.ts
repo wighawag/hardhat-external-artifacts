@@ -29,6 +29,7 @@ export default async (): Promise<Partial<ConfigHooks>> => {
 				solcVersion: externalArtifactsUserConfig?.solcVersion ?? '0.8.20',
 				warnOnInvalidArtifacts:
 					externalArtifactsUserConfig?.warnOnInvalidArtifacts ?? true,
+				debug: externalArtifactsUserConfig?.debug ?? false,
 			};
 
 			return {

@@ -112,6 +112,7 @@ export default config;
 | `resolver`               | `() => Promise<ExternalArtifact[]>` | `undefined` | Function that returns artifacts dynamically     |
 | `solcVersion`            | `string`                            | `"0.8.20"`  | Solc version for synthetic compilations         |
 | `warnOnInvalidArtifacts` | `boolean`                           | `true`      | Whether to log warnings for malformed artifacts |
+| `debug`                  | `boolean`                           | `false`     | Enable debug logging for troubleshooting        |
 
 ## Artifact Format
 
@@ -164,6 +165,58 @@ Rich artifacts are typically produced by tools like `hardhat-deploy` that preser
    - Event decoding in transaction logs
    - Error decoding for reverts
    - Function call decoding in stack traces
+
+## Troubleshooting
+
+### Contract still shows as `<UnrecognizedContract>`
+
+If you see logs like:
+```
+eth_call
+  Contract call:             <UnrecognizedContract>
+  From:                      0x...
+  To:                        0x...
+```
+
+This means EDR couldn't match the contract's bytecode. EDR identifies contracts by matching the **deployed bytecode** at the target address with bytecode from compilation results.
+
+**Possible causes:**
+
+1. **Bytecode mismatch**: The `deployedBytecode` in your artifact doesn't match what's actually deployed. This can happen due to:
+   - Different compiler versions or optimizer settings
+   - Metadata hash differences (appended to bytecode by default)
+   - Constructor arguments that set immutable values
+
+2. **Missing bytecode**: Your artifact has an empty or missing `deployedBytecode` field.
+
+**Debugging steps:**
+
+1. Enable debug logging:
+   ```typescript
+   externalArtifacts: {
+     paths: ['./artifacts/'],
+     debug: true,  // Enable debug output
+   }
+   ```
+
+2. Verify bytecode exists and has reasonable length in the debug output.
+
+3. Compare your artifact's `deployedBytecode` with the actual bytecode at the address:
+   ```typescript
+   // In your test/script
+   const actualCode = await connection.provider.request({
+     method: 'eth_getCode',
+     params: [contractAddress, 'latest'],
+   });
+   console.log('Actual bytecode length:', actualCode.length);
+   console.log('Artifact bytecode length:', artifact.deployedBytecode.length);
+   ```
+
+4. For forked networks, ensure you have the exact artifact that was used to deploy the contract on mainnet. Minor differences (like metadata hash) will prevent matching.
+
+### Rich artifacts vs Simple artifacts
+
+Rich artifacts (with `solcInput`) provide better matching because they include the complete compilation data. If you have access to the original compilation output (e.g., from `hardhat-deploy`), prefer using rich artifacts.
 
 ## Requirements
 

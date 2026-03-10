@@ -55,14 +55,40 @@ interface BytecodeOutput {
  * Creates a minimal valid AST for a source file.
  * This is needed because Hardhat's contract decoder expects a valid AST structure.
  */
-function createMinimalAst(sourceName: string, id: number): object {
+function createMinimalAst(
+	sourceName: string,
+	sourceId: number,
+	contracts?: Array<{name: string; nodeId: number}>,
+): object {
+	const nodes: object[] = [];
+	const exportedSymbols: Record<string, number[]> = {};
+
+	// Add contract definition nodes if provided
+	if (contracts) {
+		for (const contract of contracts) {
+			nodes.push({
+				nodeType: 'ContractDefinition',
+				id: contract.nodeId,
+				src: `0:0:${sourceId}`,
+				name: contract.name,
+				contractKind: 'contract',
+				abstract: false,
+				fullyImplemented: true,
+				linearizedBaseContracts: [contract.nodeId],
+				nodes: [],
+				scope: sourceId,
+			});
+			exportedSymbols[contract.name] = [contract.nodeId];
+		}
+	}
+
 	return {
 		nodeType: 'SourceUnit',
-		src: '0:0:-1',
-		id,
+		src: `0:0:${sourceId}`,
+		id: sourceId,
 		absolutePath: sourceName,
-		exportedSymbols: {},
-		nodes: [],
+		exportedSymbols,
+		nodes,
 	};
 }
 
@@ -128,69 +154,85 @@ function richArtifactToCompilation(
 	}
 
 	// Build compiler output from the artifact
+	// Only include sources that we have contract data for
+	// Including empty sources/contracts can cause EDR selector fixup issues
 	const compilerOutput: CompilerOutput = {
 		sources: {},
 		contracts: {},
 	};
 
-	// Create source entries with minimal valid AST
-	let sourceId = 0;
-	for (const srcName of Object.keys(compilerInput.sources)) {
-		const id = sourceId++;
-		compilerOutput.sources[srcName] = {
-			id,
-			ast: createMinimalAst(srcName, id),
-		};
-		compilerOutput.contracts[srcName] = {};
-	}
-
-	// Add the contract
 	const sourceName = artifact.sourceName;
-	if (!compilerOutput.contracts[sourceName]) {
-		compilerOutput.contracts[sourceName] = {};
+
+	// Track source IDs for all input sources (needed for consistent source indexing)
+	let sourceId = 0;
+	const sourceIds: Record<string, number> = {};
+	for (const srcName of Object.keys(compilerInput.sources)) {
+		sourceIds[srcName] = sourceId++;
 	}
 
-	// Ensure bytecode objects have required 'object' field
-	const bytecode: BytecodeOutput =
-		artifact.evm?.bytecode?.object !== undefined
-			? artifact.evm.bytecode
-			: {
-					object: stripHexPrefix(artifact.bytecode),
-					opcodes: artifact.evm?.bytecode?.opcodes ?? '',
-					sourceMap: artifact.evm?.bytecode?.sourceMap ?? '',
-					linkReferences:
-						artifact.evm?.bytecode?.linkReferences ??
-						artifact.linkReferences ??
-						{},
-					generatedSources: artifact.evm?.bytecode?.generatedSources,
-					functionDebugData: artifact.evm?.bytecode?.functionDebugData,
-				};
+	// Only include the source that contains our contract
+	const contractSourceId = sourceIds[sourceName] ?? sourceId++;
+	const contractNodeId = contractSourceId + 1000; // Use an offset to avoid ID conflicts
 
-	const deployedBytecode: BytecodeOutput =
-		artifact.evm?.deployedBytecode?.object !== undefined
-			? artifact.evm.deployedBytecode
-			: {
-					object: stripHexPrefix(artifact.deployedBytecode),
-					opcodes: artifact.evm?.deployedBytecode?.opcodes ?? '',
-					sourceMap: artifact.evm?.deployedBytecode?.sourceMap ?? '',
-					linkReferences:
-						artifact.evm?.deployedBytecode?.linkReferences ??
-						artifact.deployedLinkReferences ??
-						{},
-					immutableReferences:
-						artifact.evm?.deployedBytecode?.immutableReferences ?? {},
-					generatedSources: artifact.evm?.deployedBytecode?.generatedSources,
-					functionDebugData: artifact.evm?.deployedBytecode?.functionDebugData,
-				};
+	compilerOutput.sources[sourceName] = {
+		id: contractSourceId,
+		ast: createMinimalAst(sourceName, contractSourceId, [
+			{name: artifact.contractName, nodeId: contractNodeId},
+		]),
+	};
+	compilerOutput.contracts[sourceName] = {};
+
+	// Ensure the source is in compilerInput as well
+	if (!compilerInput.sources[sourceName]) {
+		compilerInput.sources[sourceName] = {content: ''};
+	}
+
+	// Build bytecode output, ensuring proper format
+	// Standard solc output has bytecode.object without 0x prefix
+	const bytecode: BytecodeOutput = {
+		object: stripHexPrefix(
+			artifact.evm?.bytecode?.object ?? artifact.bytecode ?? '0x',
+		),
+		opcodes: artifact.evm?.bytecode?.opcodes ?? '',
+		sourceMap: artifact.evm?.bytecode?.sourceMap ?? '',
+		linkReferences:
+			artifact.evm?.bytecode?.linkReferences ?? artifact.linkReferences ?? {},
+		generatedSources: artifact.evm?.bytecode?.generatedSources,
+		functionDebugData: artifact.evm?.bytecode?.functionDebugData,
+	};
+
+	const deployedBytecode: BytecodeOutput = {
+		object: stripHexPrefix(
+			artifact.evm?.deployedBytecode?.object ??
+				artifact.deployedBytecode ??
+				'0x',
+		),
+		opcodes: artifact.evm?.deployedBytecode?.opcodes ?? '',
+		sourceMap: artifact.evm?.deployedBytecode?.sourceMap ?? '',
+		linkReferences:
+			artifact.evm?.deployedBytecode?.linkReferences ??
+			artifact.deployedLinkReferences ??
+			{},
+		immutableReferences:
+			artifact.evm?.deployedBytecode?.immutableReferences ?? {},
+		generatedSources: artifact.evm?.deployedBytecode?.generatedSources,
+		functionDebugData: artifact.evm?.deployedBytecode?.functionDebugData,
+	};
+
+	// IMPORTANT: Do NOT provide method identifiers - let EDR compute them
+	// EDR has internal "selector fixup" logic for function overloading that can fail
+	// if we provide method identifiers that it then tries to reconcile with AST info.
+	// The error "Failed to fix up the selector for ... #supportsInterface" happens
+	// when EDR can't match provided selectors with overloaded functions.
+	// By providing an empty object, EDR will compute selectors from the ABI directly.
+	const methodIdentifiers: Record<string, string> = {};
 
 	compilerOutput.contracts[sourceName][artifact.contractName] = {
 		abi: artifact.abi,
 		evm: {
 			bytecode,
 			deployedBytecode,
-			methodIdentifiers:
-				artifact.evm?.methodIdentifiers ??
-				computeMethodIdentifiers(artifact.abi),
+			methodIdentifiers,
 		},
 		metadata: artifact.metadata,
 		devdoc: artifact.devdoc,
@@ -217,42 +259,66 @@ function synthesizeCompilation(
 	const outputSources: CompilerOutput['sources'] = {};
 	const contracts: CompilerOutput['contracts'] = {};
 
-	let sourceId = 0;
-
+	// First, group artifacts by source
+	const contractsBySource: Record<
+		string,
+		Array<{name: string; artifact: ExternalArtifact}>
+	> = {};
 	for (const artifact of artifacts) {
-		const sourceName = artifact.sourceName;
+		if (!contractsBySource[artifact.sourceName]) {
+			contractsBySource[artifact.sourceName] = [];
+		}
+		contractsBySource[artifact.sourceName].push({
+			name: artifact.contractName,
+			artifact,
+		});
+	}
 
-		// Add to sources if not already present
-		if (!sources[sourceName]) {
-			const id = sourceId++;
-			sources[sourceName] = {content: ''};
-			outputSources[sourceName] = {
-				id,
-				ast: createMinimalAst(sourceName, id),
-			};
-			contracts[sourceName] = {};
+	// Track IDs for AST nodes
+	let nextId = 0;
+
+	// Create sources with contract definitions in AST
+	for (const [sourceName, sourceContracts] of Object.entries(
+		contractsBySource,
+	)) {
+		const sourceId = nextId++;
+		sources[sourceName] = {content: ''};
+		contracts[sourceName] = {};
+
+		// Create contract nodes for AST
+		const contractNodes: Array<{name: string; nodeId: number}> = [];
+		for (const {name} of sourceContracts) {
+			const nodeId = nextId++;
+			contractNodes.push({name, nodeId});
 		}
 
-		// Add contract output
-		contracts[sourceName][artifact.contractName] = {
-			abi: artifact.abi,
-			evm: {
-				bytecode: {
-					object: stripHexPrefix(artifact.bytecode),
-					opcodes: '',
-					sourceMap: '',
-					linkReferences: artifact.linkReferences ?? {},
-				},
-				deployedBytecode: {
-					object: stripHexPrefix(artifact.deployedBytecode),
-					opcodes: '',
-					sourceMap: '',
-					linkReferences: artifact.deployedLinkReferences ?? {},
-					immutableReferences: {},
-				},
-				methodIdentifiers: computeMethodIdentifiers(artifact.abi),
-			},
+		outputSources[sourceName] = {
+			id: sourceId,
+			ast: createMinimalAst(sourceName, sourceId, contractNodes),
 		};
+
+		// Add contract outputs
+		for (const {name, artifact} of sourceContracts) {
+			contracts[sourceName][name] = {
+				abi: artifact.abi,
+				evm: {
+					bytecode: {
+						object: stripHexPrefix(artifact.bytecode),
+						opcodes: '',
+						sourceMap: '',
+						linkReferences: artifact.linkReferences ?? {},
+					},
+					deployedBytecode: {
+						object: stripHexPrefix(artifact.deployedBytecode),
+						opcodes: '',
+						sourceMap: '',
+						linkReferences: artifact.deployedLinkReferences ?? {},
+						immutableReferences: {},
+					},
+					methodIdentifiers: computeMethodIdentifiers(artifact.abi),
+				},
+			};
+		}
 	}
 
 	return {

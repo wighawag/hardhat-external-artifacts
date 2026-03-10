@@ -123,4 +123,10 @@ export interface ExternalArtifactsConfig {
 	 * @default true
 	 */
 	warnOnInvalidArtifacts?: boolean;
+
+	/**
+	 * Enable debug logging to diagnose issues
+	 * @default false
+	 */
+	debug?: boolean;
 }
