@@ -1,6 +1,5 @@
 import type {ExternalArtifact, RichArtifact, LinkReferences} from './types.js';
 import {isRichArtifact} from './types.js';
-import {keccak256, toBytes} from 'viem';
 
 export interface SyntheticCompilation {
 	solcVersion: string;
@@ -315,7 +314,9 @@ function synthesizeCompilation(
 						linkReferences: artifact.deployedLinkReferences ?? {},
 						immutableReferences: {},
 					},
-					methodIdentifiers: computeMethodIdentifiers(artifact.abi),
+					// Empty object - let EDR compute selectors to avoid selector fixup issues
+					// with overloaded functions (consistent with richArtifactToCompilation)
+					methodIdentifiers: {},
 				},
 			};
 		}
@@ -342,47 +343,4 @@ function synthesizeCompilation(
 
 function stripHexPrefix(hex: string): string {
 	return hex.startsWith('0x') ? hex.slice(2) : hex;
-}
-
-/**
- * Compute function selector from a function signature.
- * Takes the first 4 bytes of keccak256 hash.
- */
-function computeSelector(signature: string): string {
-	const hash = keccak256(toBytes(signature));
-	return hash.slice(2, 10); // Remove "0x" prefix and take first 8 hex chars (4 bytes)
-}
-
-/**
- * Get the canonical type for an ABI input/output parameter.
- * Handles tuple types recursively.
- */
-function getCanonicalType(param: any): string {
-	if (param.type === 'tuple' || param.type === 'tuple[]') {
-		const components = param.components || [];
-		const tupleTypes = components
-			.map((c: any) => getCanonicalType(c))
-			.join(',');
-		const isArray = param.type.endsWith('[]');
-		return `(${tupleTypes})${isArray ? '[]' : ''}`;
-	}
-	return param.type;
-}
-
-/**
- * Compute method identifiers (function selectors) from ABI.
- */
-function computeMethodIdentifiers(abi: readonly any[]): Record<string, string> {
-	const identifiers: Record<string, string> = {};
-
-	for (const item of abi) {
-		if (item.type === 'function') {
-			const inputs = item.inputs ?? [];
-			const types = inputs.map((i: any) => getCanonicalType(i)).join(',');
-			const signature = `${item.name}(${types})`;
-			identifiers[signature] = computeSelector(signature);
-		}
-	}
-
-	return identifiers;
 }

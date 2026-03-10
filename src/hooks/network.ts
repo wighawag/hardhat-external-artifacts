@@ -54,13 +54,13 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 					);
 				}
 
-				// Convert to compilation format(s)
-				// Rich artifacts with solcInput get their own compilations
-				// Simple artifacts get grouped into a synthetic compilation
-				const compilations = artifactsToCompilations(
-					artifacts,
-					config.solcVersion ?? '0.8.20',
-				);
+					// Convert to compilation format(s)
+					// Rich artifacts with solcInput get their own compilations
+					// Simple artifacts get grouped into a synthetic compilation
+					const compilations = artifactsToCompilations(
+						artifacts,
+						config.solcVersion, // Default already set in config.ts
+					);
 
 				log(
 					`[hardhat-external-artifacts] Created ${compilations.length} compilation(s)`,
