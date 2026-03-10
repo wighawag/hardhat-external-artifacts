@@ -24,8 +24,8 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 
 			const config = context.config.externalArtifacts;
 
-			// Check if there's anything to load
-			if (!config.paths?.length && !config.resolver) {
+			// Check if config exists and there's anything to load
+			if (!config || (!config.paths?.length && !config.resolver)) {
 				return connection;
 			}
 
