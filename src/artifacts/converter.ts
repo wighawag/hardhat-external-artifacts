@@ -52,6 +52,21 @@ interface BytecodeOutput {
 }
 
 /**
+ * Creates a minimal valid AST for a source file.
+ * This is needed because Hardhat's contract decoder expects a valid AST structure.
+ */
+function createMinimalAst(sourceName: string, id: number): object {
+	return {
+		nodeType: 'SourceUnit',
+		src: '0:0:-1',
+		id,
+		absolutePath: sourceName,
+		exportedSymbols: {},
+		nodes: [],
+	};
+}
+
+/**
  * Convert artifacts to compilation format.
  * If artifacts are "rich" (have solcInput), use the embedded data.
  * Otherwise, synthesize a minimal compilation.
@@ -118,11 +133,15 @@ function richArtifactToCompilation(
 		contracts: {},
 	};
 
-	// Create source entries
+	// Create source entries with minimal valid AST
 	let sourceId = 0;
-	for (const sourceName of Object.keys(compilerInput.sources)) {
-		compilerOutput.sources[sourceName] = {id: sourceId++, ast: {}};
-		compilerOutput.contracts[sourceName] = {};
+	for (const srcName of Object.keys(compilerInput.sources)) {
+		const id = sourceId++;
+		compilerOutput.sources[srcName] = {
+			id,
+			ast: createMinimalAst(srcName, id),
+		};
+		compilerOutput.contracts[srcName] = {};
 	}
 
 	// Add the contract
@@ -131,22 +150,44 @@ function richArtifactToCompilation(
 		compilerOutput.contracts[sourceName] = {};
 	}
 
+	// Ensure bytecode objects have required 'object' field
+	const bytecode: BytecodeOutput =
+		artifact.evm?.bytecode?.object !== undefined
+			? artifact.evm.bytecode
+			: {
+					object: stripHexPrefix(artifact.bytecode),
+					opcodes: artifact.evm?.bytecode?.opcodes ?? '',
+					sourceMap: artifact.evm?.bytecode?.sourceMap ?? '',
+					linkReferences:
+						artifact.evm?.bytecode?.linkReferences ??
+						artifact.linkReferences ??
+						{},
+					generatedSources: artifact.evm?.bytecode?.generatedSources,
+					functionDebugData: artifact.evm?.bytecode?.functionDebugData,
+				};
+
+	const deployedBytecode: BytecodeOutput =
+		artifact.evm?.deployedBytecode?.object !== undefined
+			? artifact.evm.deployedBytecode
+			: {
+					object: stripHexPrefix(artifact.deployedBytecode),
+					opcodes: artifact.evm?.deployedBytecode?.opcodes ?? '',
+					sourceMap: artifact.evm?.deployedBytecode?.sourceMap ?? '',
+					linkReferences:
+						artifact.evm?.deployedBytecode?.linkReferences ??
+						artifact.deployedLinkReferences ??
+						{},
+					immutableReferences:
+						artifact.evm?.deployedBytecode?.immutableReferences ?? {},
+					generatedSources: artifact.evm?.deployedBytecode?.generatedSources,
+					functionDebugData: artifact.evm?.deployedBytecode?.functionDebugData,
+				};
+
 	compilerOutput.contracts[sourceName][artifact.contractName] = {
 		abi: artifact.abi,
 		evm: {
-			bytecode: artifact.evm?.bytecode ?? {
-				object: stripHexPrefix(artifact.bytecode),
-				opcodes: '',
-				sourceMap: '',
-				linkReferences: artifact.linkReferences ?? {},
-			},
-			deployedBytecode: artifact.evm?.deployedBytecode ?? {
-				object: stripHexPrefix(artifact.deployedBytecode),
-				opcodes: '',
-				sourceMap: '',
-				linkReferences: artifact.deployedLinkReferences ?? {},
-				immutableReferences: {},
-			},
+			bytecode,
+			deployedBytecode,
 			methodIdentifiers:
 				artifact.evm?.methodIdentifiers ??
 				computeMethodIdentifiers(artifact.abi),
@@ -183,8 +224,12 @@ function synthesizeCompilation(
 
 		// Add to sources if not already present
 		if (!sources[sourceName]) {
+			const id = sourceId++;
 			sources[sourceName] = {content: ''};
-			outputSources[sourceName] = {id: sourceId++, ast: {}};
+			outputSources[sourceName] = {
+				id,
+				ast: createMinimalAst(sourceName, id),
+			};
 			contracts[sourceName] = {};
 		}
 
