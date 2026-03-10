@@ -8,21 +8,12 @@ importers:
 
   .:
     dependencies:
-      '@nomicfoundation/hardhat-zod-utils':
-        specifier: ^3.0.1
-        version: 3.0.3(zod@3.25.76)
-      commander:
-        specifier: ^14.0.3
-        version: 14.0.3
-      named-logs:
-        specifier: ^0.4.1
-        version: 0.4.1
-      named-logs-console:
-        specifier: ^0.5.1
-        version: 0.5.1
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+      '@nomicfoundation/hardhat-utils':
+        specifier: ^4.0.0
+        version: 4.0.0
+      viem:
+        specifier: ^2.0.0
+        version: 2.47.1(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.8
