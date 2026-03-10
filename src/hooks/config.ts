@@ -25,6 +25,7 @@ export default async (): Promise<Partial<ConfigHooks>> => {
 				resolver?: ExternalArtifactsConfig['resolver'];
 			} = {
 				paths: externalArtifactsUserConfig?.paths ?? [],
+				modules: externalArtifactsUserConfig?.modules ?? [],
 				resolver: externalArtifactsUserConfig?.resolver,
 				solcVersion: externalArtifactsUserConfig?.solcVersion ?? '0.8.20',
 				warnOnInvalidArtifacts:

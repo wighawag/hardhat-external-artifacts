@@ -15,8 +15,11 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 				nextContext: HookContext,
 			) => Promise<NetworkConnection<ChainTypeT>>,
 		): Promise<NetworkConnection<ChainTypeT>> => {
+			console.log(`connecting...`);
 			// Call the default behavior first to create the connection
 			const connection = await next(context);
+
+			console.log(`...connected`);
 
 			// Only inject artifacts for EDR networks (hardhat network)
 			if (connection.networkConfig.type !== 'edr-simulated') {
@@ -26,7 +29,11 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 			const config = context.config.externalArtifacts;
 
 			// Check if config exists and there's anything to load
-			if (!config || (!config.paths?.length && !config.resolver)) {
+			if (
+				!config ||
+				(!config.modules?.length && !config.paths?.length && !config.resolver)
+			) {
+				console.log(`skipping`);
 				return connection;
 			}
 
@@ -54,13 +61,13 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 					);
 				}
 
-					// Convert to compilation format(s)
-					// Rich artifacts with solcInput get their own compilations
-					// Simple artifacts get grouped into a synthetic compilation
-					const compilations = artifactsToCompilations(
-						artifacts,
-						config.solcVersion, // Default already set in config.ts
-					);
+				// Convert to compilation format(s)
+				// Rich artifacts with solcInput get their own compilations
+				// Simple artifacts get grouped into a synthetic compilation
+				const compilations = artifactsToCompilations(
+					artifacts,
+					config.solcVersion, // Default already set in config.ts
+				);
 
 				log(
 					`[hardhat-external-artifacts] Created ${compilations.length} compilation(s)`,

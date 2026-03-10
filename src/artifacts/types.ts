@@ -100,11 +100,24 @@ export type ArtifactResolver = () =>
  */
 export interface ExternalArtifactsConfig {
 	/**
-	 * Paths to artifact files or directories
+	 * Paths to artifact files or directories (relative to project root)
 	 * - File path: loads single artifact JSON
 	 * - Directory path: loads all .json files recursively
 	 */
 	paths?: string[];
+
+	/**
+	 * Module specifiers to resolve from node_modules
+	 * Uses Node.js module resolution to find exported artifact directories.
+	 *
+	 * @example
+	 * ```ts
+	 * // If @my-org/contracts exports "./artifacts" in package.json:
+	 * // "exports": { "./artifacts": "./dist/artifacts" }
+	 * modules: ['@my-org/contracts/artifacts']
+	 * ```
+	 */
+	modules?: string[];
 
 	/**
 	 * Function that resolves and returns artifacts dynamically

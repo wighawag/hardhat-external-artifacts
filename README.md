@@ -41,6 +41,43 @@ const config: HardhatUserConfig = {
 export default config;
 ```
 
+### Loading from npm Packages
+
+You can load artifacts directly from npm packages using the `modules` option. This uses Node.js module resolution, supporting both package exports and direct paths:
+
+```typescript
+// hardhat.config.ts
+import type {HardhatUserConfig} from 'hardhat/config';
+import 'hardhat-external-artifacts';
+
+const config: HardhatUserConfig = {
+	solidity: '0.8.20',
+	externalArtifacts: {
+		// Load from npm packages via module resolution
+		modules: [
+			'@my-org/contracts/artifacts',     // Uses package.json "exports"
+			'some-package/dist/artifacts',     // Direct path in package
+		],
+	},
+};
+
+export default config;
+```
+
+**Note:** The `modules` option differs from `paths` in that it resolves module specifiers from `node_modules` using Node.js resolution, respecting the package's `exports` field. This is useful when a package explicitly exports its artifacts folder.
+
+For example, if a package has:
+```json
+{
+  "name": "@my-org/contracts",
+  "exports": {
+    "./artifacts": "./dist/artifacts"
+  }
+}
+```
+
+Then using `modules: ['@my-org/contracts/artifacts']` will correctly resolve to the exported path.
+
 ### Using a Resolver Function
 
 For more dynamic artifact loading, you can use a resolver function:
@@ -106,13 +143,14 @@ export default config;
 
 ## Configuration Options
 
-| Option                   | Type                                | Default     | Description                                     |
-| ------------------------ | ----------------------------------- | ----------- | ----------------------------------------------- |
-| `paths`                  | `string[]`                          | `[]`        | Paths to artifact files or directories          |
-| `resolver`               | `() => Promise<ExternalArtifact[]>` | `undefined` | Function that returns artifacts dynamically     |
-| `solcVersion`            | `string`                            | `"0.8.20"`  | Solc version for synthetic compilations         |
-| `warnOnInvalidArtifacts` | `boolean`                           | `true`      | Whether to log warnings for malformed artifacts |
-| `debug`                  | `boolean`                           | `false`     | Enable debug logging for troubleshooting        |
+| Option                   | Type                                | Default     | Description                                              |
+| ------------------------ | ----------------------------------- | ----------- | -------------------------------------------------------- |
+| `paths`                  | `string[]`                          | `[]`        | Paths to artifact files or directories (relative/absolute) |
+| `modules`                | `string[]`                          | `[]`        | Module specifiers to resolve from node_modules           |
+| `resolver`               | `() => Promise<ExternalArtifact[]>` | `undefined` | Function that returns artifacts dynamically              |
+| `solcVersion`            | `string`                            | `"0.8.20"`  | Solc version for synthetic compilations                  |
+| `warnOnInvalidArtifacts` | `boolean`                           | `true`      | Whether to log warnings for malformed artifacts          |
+| `debug`                  | `boolean`                           | `false`     | Enable debug logging for troubleshooting                 |
 
 ## Artifact Format
 
