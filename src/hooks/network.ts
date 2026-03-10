@@ -15,11 +15,8 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 				nextContext: HookContext,
 			) => Promise<NetworkConnection<ChainTypeT>>,
 		): Promise<NetworkConnection<ChainTypeT>> => {
-			console.log(`connecting...`);
 			// Call the default behavior first to create the connection
 			const connection = await next(context);
-
-			console.log(`...connected`);
 
 			// Only inject artifacts for EDR networks (hardhat network)
 			if (connection.networkConfig.type !== 'edr-simulated') {
@@ -33,7 +30,6 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 				!config ||
 				(!config.modules?.length && !config.paths?.length && !config.resolver)
 			) {
-				console.log(`skipping`);
 				return connection;
 			}
 
