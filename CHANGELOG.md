@@ -1,5 +1,11 @@
 # hardhat-external-artifacts
 
+## 0.0.4
+
+### Patch Changes
+
+- fix immutable references missing
+
 ## 0.0.3
 
 ### Patch Changes
