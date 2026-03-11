@@ -83,12 +83,34 @@ export interface LinkReferences {
 }
 
 /**
- * Type guard to check if an artifact is a rich artifact
+ * Type guard to check if an artifact has solcInput.
+ * Note: The converter now handles artifacts flexibly, extracting
+ * available data from solcInput, metadata, or evm fields without
+ * requiring a strict "rich" vs "simple" classification.
  */
-export function isRichArtifact(
+export function hasSolcInput(
 	artifact: ExternalArtifact,
-): artifact is RichArtifact {
-	return 'solcInput' in artifact && artifact.solcInput !== undefined;
+): artifact is RichArtifact & {solcInput: string} {
+	return 'solcInput' in artifact && typeof (artifact as RichArtifact).solcInput === 'string';
+}
+
+/**
+ * Type guard to check if an artifact has metadata.
+ * Metadata can be used as a fallback for compiler settings when solcInput is not available.
+ */
+export function hasMetadata(
+	artifact: ExternalArtifact,
+): artifact is RichArtifact & {metadata: string} {
+	return 'metadata' in artifact && typeof (artifact as RichArtifact).metadata === 'string';
+}
+
+/**
+ * Type guard to check if an artifact has EVM data.
+ */
+export function hasEvmData(
+	artifact: ExternalArtifact,
+): artifact is RichArtifact & {evm: NonNullable<RichArtifact['evm']>} {
+	return 'evm' in artifact && (artifact as RichArtifact).evm !== undefined;
 }
 
 /**

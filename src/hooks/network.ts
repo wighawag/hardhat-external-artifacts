@@ -5,7 +5,7 @@ import {
 	artifactsToCompilations,
 	type SyntheticCompilation,
 } from '../artifacts/converter.js';
-import {isRichArtifact} from '../artifacts/types.js';
+import {hasSolcInput} from '../artifacts/types.js';
 
 export default async (): Promise<Partial<NetworkHooks>> => {
 	const handlers: Partial<NetworkHooks> = {
@@ -50,10 +50,10 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 					`[hardhat-external-artifacts] Loaded ${artifacts.length} artifact(s):`,
 				);
 				for (const artifact of artifacts) {
-					const isRich = isRichArtifact(artifact);
+					const hasSolc = hasSolcInput(artifact);
 					const deployedBytecodeLength = artifact.deployedBytecode?.length || 0;
 					log(
-						`  - ${artifact.sourceName}:${artifact.contractName} (${isRich ? 'rich' : 'simple'}, deployedBytecode: ${deployedBytecodeLength} chars)`,
+						`  - ${artifact.sourceName}:${artifact.contractName} (${hasSolc ? 'with solcInput' : 'minimal'}, deployedBytecode: ${deployedBytecodeLength} chars)`,
 					);
 				}
 
