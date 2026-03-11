@@ -23,6 +23,9 @@ export interface ExternalArtifact {
 
 	/** Library link references for deployed bytecode */
 	deployedLinkReferences?: LinkReferences;
+
+	/** Immutable references for deployed bytecode (Hardhat v3 format) */
+	immutableReferences?: Record<string, Array<{start: number; length: number}>>;
 }
 
 /**

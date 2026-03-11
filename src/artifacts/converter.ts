@@ -213,7 +213,9 @@ function richArtifactToCompilation(
 			artifact.deployedLinkReferences ??
 			{},
 		immutableReferences:
-			artifact.evm?.deployedBytecode?.immutableReferences ?? {},
+			artifact.evm?.deployedBytecode?.immutableReferences ??
+			artifact.immutableReferences ??
+			{},
 		generatedSources: artifact.evm?.deployedBytecode?.generatedSources,
 		functionDebugData: artifact.evm?.deployedBytecode?.functionDebugData,
 	};
@@ -312,7 +314,7 @@ function synthesizeCompilation(
 						opcodes: '',
 						sourceMap: '',
 						linkReferences: artifact.deployedLinkReferences ?? {},
-						immutableReferences: {},
+						immutableReferences: artifact.immutableReferences ?? {},
 					},
 					// Empty object - let EDR compute selectors to avoid selector fixup issues
 					// with overloaded functions (consistent with richArtifactToCompilation)
