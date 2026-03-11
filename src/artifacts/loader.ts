@@ -429,6 +429,8 @@ export class ArtifactLoader {
 			deployedBytecode: raw.deployedBytecode ?? '0x',
 			linkReferences: raw.linkReferences ?? {},
 			deployedLinkReferences: raw.deployedLinkReferences ?? {},
+			// Immutable references for deployed bytecode (Hardhat v3 format)
+			immutableReferences: raw.immutableReferences,
 		};
 
 		// Check if this is a "rich" artifact with embedded solcInput

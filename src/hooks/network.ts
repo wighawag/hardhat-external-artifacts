@@ -63,6 +63,7 @@ export default async (): Promise<Partial<NetworkHooks>> => {
 				const compilations = artifactsToCompilations(
 					artifacts,
 					config.solcVersion, // Default already set in config.ts
+					debug,
 				);
 
 				log(
@@ -154,9 +155,23 @@ function logCompilation(
 			const methodCount = Object.keys(
 				contract.evm?.methodIdentifiers || {},
 			).length;
+			const immutableRefs = contract.evm?.deployedBytecode?.immutableReferences || {};
+			const immutableCount = Object.keys(immutableRefs).length;
 			log(
-				`  ${sourceName}:${contractName} - deployedBytecode: ${deployedBytecodeLength} chars (${Math.floor(deployedBytecodeLength / 2)} bytes), methods: ${methodCount}`,
+				`  ${sourceName}:${contractName} - deployedBytecode: ${deployedBytecodeLength} chars (${Math.floor(deployedBytecodeLength / 2)} bytes), methods: ${methodCount}, immutableRefs: ${immutableCount}`,
 			);
+			// Log immutable references details
+			if (immutableCount > 0) {
+				log(`    immutableReferences keys: ${Object.keys(immutableRefs).join(', ')}`);
+				// Show first few references
+				const sample = Object.entries(immutableRefs).slice(0, 3);
+				for (const [id, refs] of sample) {
+					log(`      ${id}: ${JSON.stringify(refs)}`);
+				}
+				if (immutableCount > 3) {
+					log(`      ... and ${immutableCount - 3} more`);
+				}
+			}
 			// Log first 100 chars of bytecode for verification
 			if (deployedBytecodeLength > 0) {
 				const preview = contract.evm.deployedBytecode.object.substring(0, 100);

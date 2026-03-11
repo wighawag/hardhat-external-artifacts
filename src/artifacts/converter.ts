@@ -99,16 +99,30 @@ function createMinimalAst(
 export function artifactsToCompilations(
 	artifacts: ExternalArtifact[],
 	defaultSolcVersion: string,
+	debug: boolean = false,
 ): SyntheticCompilation[] {
 	// Group artifacts by whether they have solcInput
 	const richArtifacts = artifacts.filter(isRichArtifact);
 	const simpleArtifacts = artifacts.filter((a) => !isRichArtifact(a));
 
+	if (debug) {
+		console.log(`[external-artifacts] Processing ${artifacts.length} artifacts:`);
+		console.log(`  - Rich artifacts (with solcInput): ${richArtifacts.length}`);
+		console.log(`  - Simple artifacts: ${simpleArtifacts.length}`);
+		for (const artifact of artifacts) {
+			const isRich = isRichArtifact(artifact);
+			const richArt = artifact as Partial<RichArtifact>;
+			const immRefs = richArt.evm?.deployedBytecode?.immutableReferences ?? artifact.immutableReferences;
+			const immCount = immRefs ? Object.keys(immRefs).length : 0;
+			console.log(`  - ${artifact.contractName}: ${isRich ? 'rich' : 'simple'}, immutableReferences: ${immCount} keys`);
+		}
+	}
+
 	const compilations: SyntheticCompilation[] = [];
 
 	// Process rich artifacts - these have embedded solcInput
 	for (const artifact of richArtifacts) {
-		const compilation = richArtifactToCompilation(artifact);
+		const compilation = richArtifactToCompilation(artifact, debug);
 		if (compilation) {
 			compilations.push(compilation);
 		}
@@ -117,7 +131,7 @@ export function artifactsToCompilations(
 	// Process simple artifacts - synthesize compilation
 	if (simpleArtifacts.length > 0) {
 		compilations.push(
-			synthesizeCompilation(simpleArtifacts, defaultSolcVersion),
+			synthesizeCompilation(simpleArtifacts, defaultSolcVersion, debug),
 		);
 	}
 
@@ -130,6 +144,7 @@ export function artifactsToCompilations(
  */
 function richArtifactToCompilation(
 	artifact: RichArtifact,
+	debug: boolean = false,
 ): SyntheticCompilation | null {
 	if (!artifact.solcInput) {
 		return null;
@@ -241,6 +256,18 @@ function richArtifactToCompilation(
 		storageLayout: artifact.storageLayout,
 	};
 
+	if (debug) {
+		const immRefKeys = Object.keys(deployedBytecode.immutableReferences ?? {});
+		console.log(`[external-artifacts] Rich artifact: ${artifact.contractName}`);
+		console.log(`  - sourceName: ${sourceName}`);
+		console.log(`  - solcVersion: ${solcVersion}`);
+		console.log(`  - immutableReferences keys: ${immRefKeys.length}`);
+		if (immRefKeys.length > 0) {
+			console.log(`  - immutableReferences sample:`, JSON.stringify(deployedBytecode.immutableReferences, null, 2).slice(0, 500));
+		}
+		console.log(`  - deployedBytecode length: ${deployedBytecode.object.length / 2} bytes`);
+	}
+
 	return {
 		solcVersion,
 		compilerInput,
@@ -255,6 +282,7 @@ function richArtifactToCompilation(
 function synthesizeCompilation(
 	artifacts: ExternalArtifact[],
 	solcVersion: string,
+	debug: boolean = false,
 ): SyntheticCompilation {
 	const sources: CompilerInput['sources'] = {};
 	const outputSources: CompilerOutput['sources'] = {};
@@ -300,6 +328,15 @@ function synthesizeCompilation(
 
 		// Add contract outputs
 		for (const {name, artifact} of sourceContracts) {
+			// Cast to access optional evm property that may exist on artifacts
+			// without solcInput (partial RichArtifact)
+			const richArtifact = artifact as Partial<RichArtifact>;
+
+			const immutableReferences =
+				richArtifact.evm?.deployedBytecode?.immutableReferences ??
+				artifact.immutableReferences ??
+				{};
+
 			contracts[sourceName][name] = {
 				abi: artifact.abi,
 				evm: {
@@ -314,13 +351,25 @@ function synthesizeCompilation(
 						opcodes: '',
 						sourceMap: '',
 						linkReferences: artifact.deployedLinkReferences ?? {},
-						immutableReferences: artifact.immutableReferences ?? {},
+						// Check both evm.deployedBytecode.immutableReferences and top-level
+						immutableReferences,
 					},
 					// Empty object - let EDR compute selectors to avoid selector fixup issues
 					// with overloaded functions (consistent with richArtifactToCompilation)
 					methodIdentifiers: {},
 				},
 			};
+
+			if (debug) {
+				const immRefKeys = Object.keys(immutableReferences);
+				console.log(`[external-artifacts] Simple artifact: ${name}`);
+				console.log(`  - sourceName: ${sourceName}`);
+				console.log(`  - immutableReferences keys: ${immRefKeys.length}`);
+				if (immRefKeys.length > 0) {
+					console.log(`  - immutableReferences sample:`, JSON.stringify(immutableReferences, null, 2).slice(0, 500));
+				}
+				console.log(`  - deployedBytecode length: ${artifact.deployedBytecode.length / 2} bytes`);
+			}
 		}
 	}
 
